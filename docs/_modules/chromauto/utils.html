@@ -1,0 +1,535 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>chromauto.utils &#8212; chromauto  documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for chromauto.utils</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">matplotlib.patches</span> <span class="k">import</span> <span class="n">Polygon</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">signal</span>
+<span class="kn">from</span> <span class="nn">matplotlib.ticker</span> <span class="k">import</span> <span class="n">FormatStrFormatter</span>
+<span class="kn">import</span> <span class="nn">peakutils</span>
+
+
+<div class="viewcode-block" id="find_area"><a class="viewcode-back" href="../../utils.html#chromauto.utils.find_area">[docs]</a><span class="k">def</span> <span class="nf">find_area</span><span class="p">(</span><span class="n">startx</span><span class="p">,</span> <span class="n">endx</span><span class="p">,</span> <span class="n">real_y</span><span class="p">,</span> <span class="n">blank_x</span><span class="p">,</span> <span class="n">trapazoid_area</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Find area under curve using trapeszoidal rule.</span>
+
+<span class="sd">    :param startx: starting index</span>
+<span class="sd">    :param endx: ending index</span>
+<span class="sd">    :param real_y: array of y values</span>
+<span class="sd">    :param blank_x: array of blank_x values</span>
+<span class="sd">    :param ly: custom trapazoid area to subtract from composite trapezoidal rule.</span>
+<span class="sd">    :return: area beneath the curve</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">trapazoid_area</span><span class="p">:</span>
+        <span class="c1"># area of trapazoid below the curve</span>
+        <span class="n">trapazoid_area</span> <span class="o">=</span> <span class="p">((</span><span class="n">real_y</span><span class="p">[</span><span class="n">startx</span><span class="p">]</span> <span class="o">+</span> <span class="n">real_y</span><span class="p">[</span><span class="n">endx</span><span class="p">])</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">blank_x</span><span class="p">[</span><span class="n">endx</span><span class="p">]</span> <span class="o">-</span> <span class="n">blank_x</span><span class="p">[</span><span class="n">startx</span><span class="p">])</span>
+
+    <span class="c1"># calculate the area, subtract the trapazoid area</span>
+    <span class="n">area</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="n">real_y</span><span class="p">[</span><span class="n">startx</span><span class="p">:</span><span class="n">endx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span> <span class="n">blank_x</span><span class="p">[</span><span class="n">startx</span><span class="p">:</span><span class="n">endx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span> <span class="o">-</span> <span class="n">trapazoid_area</span>
+
+    <span class="k">return</span> <span class="n">area</span></div>
+
+
+<div class="viewcode-block" id="peak_detect"><a class="viewcode-back" href="../../utils.html#chromauto.utils.peak_detect">[docs]</a><span class="k">def</span> <span class="nf">peak_detect</span><span class="p">(</span><span class="n">y_val</span><span class="p">,</span> <span class="n">xran</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="n">min_dist</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">max_peak</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">thres</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    :param y_val: array of y values to evaluate for peaks</span>
+<span class="sd">    :param xran: range of thresholds to iterate through</span>
+<span class="sd">    :param min_dist: minimum distance between peaks</span>
+<span class="sd">    :param max_peak: maximum number of peaks to detect</span>
+<span class="sd">    :param thres: manually set threshold</span>
+<span class="sd">    :return: indices of the peaks</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">indices</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">thres</span><span class="p">:</span>
+        <span class="c1"># iterate through the range of thresholds until number of peaks is &lt;= maximum number of peaks</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">*</span><span class="n">xran</span><span class="p">):</span>
+            <span class="n">indices</span> <span class="o">=</span> <span class="n">peakutils</span><span class="o">.</span><span class="n">indexes</span><span class="p">(</span><span class="n">y_val</span><span class="p">,</span> <span class="n">thres</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">/</span> <span class="mi">100</span><span class="p">,</span> <span class="n">min_dist</span><span class="o">=</span><span class="n">min_dist</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">max_peak</span><span class="p">:</span>
+                <span class="c1"># print &#39;THRESHOLD&#39;, i</span>
+                <span class="k">break</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">peakutils</span><span class="o">.</span><span class="n">indexes</span><span class="p">(</span><span class="n">y_val</span><span class="p">,</span> <span class="n">thres</span><span class="o">=</span><span class="n">thres</span><span class="p">,</span> <span class="n">min_dist</span><span class="o">=</span><span class="n">min_dist</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">indices</span></div>
+
+
+<div class="viewcode-block" id="add_plot"><a class="viewcode-back" href="../../utils.html#chromauto.utils.add_plot">[docs]</a><span class="k">def</span> <span class="nf">add_plot</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convenience function for generating an overview image</span>
+
+<span class="sd">    :param ax: the pyplot.ax object</span>
+<span class="sd">    :param i: the dictionary of attributes for the plot {&#39;axis&#39;,&#39;plots&#39;,&#39;txt&#39;,&#39;patch&#39;}</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">xaxis</span><span class="o">.</span><span class="n">set_major_formatter</span><span class="p">(</span><span class="n">FormatStrFormatter</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%.2f</span><span class="s1">&#39;</span><span class="p">))</span>
+    <span class="k">if</span> <span class="s1">&#39;axis&#39;</span> <span class="ow">in</span> <span class="n">i</span><span class="p">:</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;axis&#39;</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">i</span><span class="p">[</span><span class="s1">&#39;plots&#39;</span><span class="p">]:</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">a</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+    <span class="k">if</span> <span class="s1">&#39;txt&#39;</span> <span class="ow">in</span> <span class="n">i</span><span class="p">:</span>
+        <span class="n">anno_opts</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">xy</span><span class="o">=</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;txt&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">i</span><span class="p">[</span><span class="s1">&#39;txt&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">]),</span> <span class="n">xycoords</span><span class="o">=</span><span class="s1">&#39;axes fraction&#39;</span><span class="p">,</span>
+                         <span class="n">va</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;txt&#39;</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="o">**</span><span class="n">anno_opts</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s1">&#39;patch&#39;</span> <span class="ow">in</span> <span class="n">i</span><span class="p">:</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">add_patch</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;patch&#39;</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="normalize_baseline"><a class="viewcode-back" href="../../utils.html#chromauto.utils.normalize_baseline">[docs]</a><span class="k">def</span> <span class="nf">normalize_baseline</span><span class="p">(</span><span class="n">blank_x</span><span class="p">,</span> <span class="n">blank_y</span><span class="p">,</span> <span class="n">data_x</span><span class="p">,</span> <span class="n">data_y</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    1.  Normalize baseline by smoothing out data &amp; blank run y values</span>
+<span class="sd">    2.  subtract them</span>
+<span class="sd">    3.  inverting result</span>
+<span class="sd">    4.  finding sparse peaks in that results</span>
+<span class="sd">    5.  removing interpolating between those peaks.</span>
+
+<span class="sd">    :param blank_x: blank y values</span>
+<span class="sd">    :param blank_y: blank blank_x values</span>
+<span class="sd">    :param data_x: data y values</span>
+<span class="sd">    :param data_y: data blank_x values</span>
+<span class="sd">    :param kwargs: settings dictionary</span>
+<span class="sd">    :return: (normalized blank blank_x values, normalized blank y values)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># make sure the length of the areas is equal</span>
+    <span class="c1"># blank runs typically are longer</span>
+    <span class="n">x_length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_y</span><span class="p">)</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">blank_y</span><span class="p">)</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_y</span><span class="p">)</span> <span class="k">else</span> <span class="nb">len</span><span class="p">(</span><span class="n">blank_x</span><span class="p">)</span>
+
+    <span class="n">blank_y_win_length</span> <span class="o">=</span> <span class="mi">333</span> <span class="k">if</span> <span class="s1">&#39;blank_y_win_length&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="k">else</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;blank_y_win_length&#39;</span><span class="p">]</span>
+    <span class="n">norm_thres_range</span> <span class="o">=</span> <span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">30</span><span class="p">)</span> <span class="k">if</span> <span class="s1">&#39;norm_thres_range&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="k">else</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;norm_thres_range&#39;</span><span class="p">]</span>
+    <span class="n">norm_min_dist</span> <span class="o">=</span> <span class="mi">3000</span> <span class="k">if</span> <span class="s1">&#39;norm_min_dist&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="k">else</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;norm_min_dist&#39;</span><span class="p">]</span>
+    <span class="n">norm_polyorder</span> <span class="o">=</span> <span class="mi">5</span> <span class="k">if</span> <span class="s1">&#39;norm_polyorder&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="k">else</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;norm_polyorder&#39;</span><span class="p">]</span>
+
+    <span class="c1"># smooth out data y values</span>
+    <span class="n">smooth_real_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="n">signal</span><span class="o">.</span><span class="n">savgol_filter</span><span class="p">(</span><span class="n">data_y</span><span class="p">[:</span><span class="n">x_length</span><span class="p">],</span> <span class="n">window_length</span><span class="o">=</span><span class="n">blank_y_win_length</span><span class="p">,</span> <span class="n">polyorder</span><span class="o">=</span><span class="n">norm_polyorder</span><span class="p">))</span>
+    <span class="c1"># smooth out blank y values</span>
+    <span class="n">smooth_blank_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="n">signal</span><span class="o">.</span><span class="n">savgol_filter</span><span class="p">(</span><span class="n">blank_y</span><span class="p">[:</span><span class="n">x_length</span><span class="p">],</span> <span class="n">window_length</span><span class="o">=</span><span class="n">blank_y_win_length</span><span class="p">,</span> <span class="n">polyorder</span><span class="o">=</span><span class="n">norm_polyorder</span><span class="p">))</span>
+
+    <span class="c1"># smooth out both together, after subtracting smooth blank from smooth y</span>
+    <span class="n">smooth_combo</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">savgol_filter</span><span class="p">(</span><span class="n">smooth_real_y</span> <span class="o">-</span> <span class="n">smooth_blank_y</span><span class="p">,</span> <span class="n">window_length</span><span class="o">=</span><span class="n">blank_y_win_length</span><span class="p">,</span>
+                                                 <span class="n">polyorder</span><span class="o">=</span><span class="n">norm_polyorder</span><span class="p">))</span>
+
+    <span class="c1"># invert the smoothed array and find peaks</span>
+    <span class="n">inv</span> <span class="o">=</span> <span class="n">peak_detect</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">smooth_combo</span><span class="p">),</span> <span class="n">xran</span><span class="o">=</span><span class="n">norm_thres_range</span><span class="p">,</span> <span class="n">min_dist</span><span class="o">=</span><span class="n">norm_min_dist</span><span class="p">)</span>
+
+    <span class="c1"># exclude any peaks that are &quot;higher&quot; than the last data point of non inverted array</span>
+    <span class="n">inv</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">inv</span> <span class="k">if</span> <span class="n">data_y</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">data_y</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span> <span class="o">+</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">data_y</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+
+    <span class="c1"># create a straight line from start to end data values</span>
+    <span class="n">norm_blank_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">data_x</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_x</span><span class="p">))</span>
+    <span class="n">norm_blank_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">data_y</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_y</span><span class="p">))</span>
+
+    <span class="n">cur_idx</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">inv</span><span class="p">):</span>
+        <span class="c1">#  match the slope between the beginning and end of the inverted peaks</span>
+        <span class="n">norm_blank_y</span><span class="p">[</span><span class="n">cur_idx</span><span class="p">:</span><span class="n">p</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">data_y</span><span class="p">[</span><span class="n">cur_idx</span><span class="p">],</span> <span class="n">data_y</span><span class="p">[</span><span class="n">p</span><span class="p">],</span> <span class="n">p</span> <span class="o">-</span> <span class="n">cur_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">cur_idx</span> <span class="o">=</span> <span class="n">p</span>
+
+    <span class="k">return</span> <span class="n">norm_blank_x</span><span class="p">,</span> <span class="n">norm_blank_y</span></div>
+
+
+<div class="viewcode-block" id="walk_peaks"><a class="viewcode-back" href="../../utils.html#chromauto.utils.walk_peaks">[docs]</a><span class="k">def</span> <span class="nf">walk_peaks</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="n">real_y</span><span class="p">,</span> <span class="n">blank_y</span><span class="p">,</span> <span class="n">blank_x</span><span class="p">,</span> <span class="n">max_x</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">     Walk backwards and forwards from the peak index</span>
+
+<span class="sd">    :param indices: (list) List of peak indices from peak_detect</span>
+<span class="sd">    :param real_y (array): real y values</span>
+<span class="sd">    :param blank_y (array): blank y values</span>
+<span class="sd">    :param blank_x (array): blank x values</span>
+<span class="sd">    :param max_x (int): max index for arrays</span>
+<span class="sd">    :param kwargs: settings dictionary</span>
+<span class="sd">    :return: </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">data_y_win_length</span> <span class="o">=</span> <span class="mi">111</span> <span class="k">if</span> <span class="s1">&#39;data_y_win_length&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="k">else</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;data_y_win_length&#39;</span><span class="p">]</span>
+    <span class="n">savgol_polyorder</span> <span class="o">=</span> <span class="mi">7</span> <span class="k">if</span> <span class="s1">&#39;savgol_polyorder&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="k">else</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;savgol_polyorder&#39;</span><span class="p">]</span>
+    <span class="n">minimum_area</span> <span class="o">=</span> <span class="mf">0.1</span> <span class="k">if</span> <span class="s1">&#39;minimum_area&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="k">else</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;minimum_area&#39;</span><span class="p">]</span>
+    <span class="c1"># min_dist_between_peaks = 20</span>
+
+    <span class="c1"># minimum distance between peaks</span>
+    <span class="n">min_dist_between_peaks</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="s1">&#39;min_dist_between_peaks&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="k">else</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;min_dist_between_peaks&#39;</span><span class="p">]</span>
+
+    <span class="c1"># minimum slope of blank line</span>
+    <span class="n">min_blank_slope</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="s1">&#39;min_blank_slope&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="k">else</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;min_blank_slope&#39;</span><span class="p">]</span>
+
+    <span class="c1"># step interval when walking the y values</span>
+    <span class="n">xinterval</span> <span class="o">=</span> <span class="mi">10</span> <span class="k">if</span> <span class="s1">&#39;xinterval&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="k">else</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;xinterval&#39;</span><span class="p">]</span>
+
+    <span class="c1"># add double peaks</span>
+    <span class="n">min_walking_vert</span> <span class="o">=</span> <span class="kc">False</span> <span class="k">if</span> <span class="s1">&#39;min_walking_vert&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="k">else</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;min_walking_vert&#39;</span><span class="p">]</span>
+    <span class="n">vert_distance</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="n">areas</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># smooth the real y values so slope comparison is not affected by noise as much</span>
+    <span class="n">smooth_walking_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="n">signal</span><span class="o">.</span><span class="n">savgol_filter</span><span class="p">(</span><span class="n">real_y</span><span class="p">,</span> <span class="n">window_length</span><span class="o">=</span><span class="n">data_y_win_length</span><span class="p">,</span> <span class="n">polyorder</span><span class="o">=</span><span class="n">savgol_polyorder</span><span class="p">))</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">indices</span><span class="p">:</span>
+
+        <span class="n">signal_slope</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">blank_slope</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># the vert_distance flag will keep steping back if the vertical difference</span>
+        <span class="c1"># between baseline and trough between peaks is greater than min_walking_vert</span>
+        <span class="k">if</span> <span class="n">min_walking_vert</span><span class="p">:</span>
+            <span class="n">vert_distance</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="c1"># pi is &quot;past index&quot;. Keep stepping back while (slope of real_y) &gt; (slope of blank polyfit + min_slope</span>
+        <span class="n">pi</span> <span class="o">=</span> <span class="n">i</span>
+
+        <span class="k">while</span> <span class="p">(</span><span class="n">signal_slope</span> <span class="o">&gt;</span> <span class="n">blank_slope</span> <span class="o">+</span> <span class="n">min_blank_slope</span> <span class="ow">or</span> <span class="n">vert_distance</span><span class="p">)</span> <span class="ow">and</span> <span class="n">pi</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">vert_distance</span> <span class="o">=</span> <span class="n">smooth_walking_y</span><span class="p">[</span><span class="n">pi</span><span class="p">]</span> <span class="o">-</span> <span class="n">blank_y</span><span class="p">[</span><span class="n">pi</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">min_walking_vert</span>
+            <span class="n">signal_slope</span> <span class="o">=</span> <span class="n">smooth_walking_y</span><span class="p">[</span><span class="n">pi</span><span class="p">]</span> <span class="o">-</span> <span class="n">smooth_walking_y</span><span class="p">[</span><span class="n">pi</span> <span class="o">-</span> <span class="n">xinterval</span><span class="p">]</span>
+            <span class="n">blank_slope</span> <span class="o">=</span> <span class="n">blank_y</span><span class="p">[</span><span class="n">pi</span><span class="p">]</span> <span class="o">-</span> <span class="n">blank_y</span><span class="p">[</span><span class="n">pi</span> <span class="o">-</span> <span class="n">xinterval</span><span class="p">]</span>
+            <span class="n">pi</span> <span class="o">-=</span> <span class="n">xinterval</span>
+
+        <span class="c1"># fi is &quot;future index&quot;. Keep stepping back while (slope of real_y) &gt; (slope of blank polyfit + min_slope)</span>
+        <span class="c1"># OR keep stepping forward if the space between blank y line and real y line is greater than the avg difference</span>
+        <span class="c1"># between them</span>
+
+        <span class="n">fi</span> <span class="o">=</span> <span class="n">i</span>
+
+        <span class="n">signal_slope</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">blank_slope</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">while</span> <span class="n">fi</span> <span class="o">+</span> <span class="n">xinterval</span> <span class="o">&lt;</span> <span class="n">max_x</span> <span class="ow">and</span> <span class="p">(</span><span class="n">signal_slope</span> <span class="o">&gt;</span> <span class="n">blank_slope</span> <span class="o">+</span> <span class="n">min_blank_slope</span> <span class="ow">or</span> <span class="n">vert_distance</span><span class="p">):</span>
+            <span class="n">vert_distance</span> <span class="o">=</span> <span class="n">smooth_walking_y</span><span class="p">[</span><span class="n">fi</span><span class="p">]</span> <span class="o">-</span> <span class="n">blank_y</span><span class="p">[</span><span class="n">fi</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">min_walking_vert</span>
+            <span class="n">signal_slope</span> <span class="o">=</span> <span class="n">smooth_walking_y</span><span class="p">[</span><span class="n">fi</span><span class="p">]</span> <span class="o">-</span> <span class="n">smooth_walking_y</span><span class="p">[</span><span class="n">fi</span> <span class="o">+</span> <span class="n">xinterval</span><span class="p">]</span>
+            <span class="n">blank_slope</span> <span class="o">=</span> <span class="n">blank_y</span><span class="p">[</span><span class="n">fi</span><span class="p">]</span> <span class="o">-</span> <span class="n">blank_y</span><span class="p">[</span><span class="n">fi</span> <span class="o">+</span> <span class="n">xinterval</span><span class="p">]</span>
+            <span class="n">fi</span> <span class="o">+=</span> <span class="n">xinterval</span>
+
+        <span class="c1"># some sanity checks for index</span>
+        <span class="k">if</span> <span class="n">pi</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">pi</span> <span class="o">&lt;</span> <span class="n">max_x</span> <span class="ow">and</span> <span class="n">fi</span> <span class="o">&lt;</span> <span class="n">max_x</span><span class="p">:</span>
+
+            <span class="c1"># this short test checks if the slope between the beginning index and ending index</span>
+            <span class="c1"># crosses through the data y values. If it does, then change the index to where the</span>
+            <span class="c1"># slope intercepts</span>
+            <span class="n">test_slope</span> <span class="o">=</span> <span class="p">(</span><span class="n">real_y</span><span class="p">[</span><span class="n">fi</span><span class="p">]</span> <span class="o">-</span> <span class="n">real_y</span><span class="p">[</span><span class="n">pi</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span><span class="n">blank_x</span><span class="p">[</span><span class="n">fi</span><span class="p">]</span> <span class="o">-</span> <span class="n">blank_x</span><span class="p">[</span><span class="n">pi</span><span class="p">])</span>
+            <span class="n">ppi</span> <span class="o">=</span> <span class="n">i</span>
+            <span class="k">while</span> <span class="n">ppi</span> <span class="o">&gt;</span> <span class="n">pi</span> <span class="ow">and</span> <span class="n">real_y</span><span class="p">[</span><span class="n">ppi</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">test_slope</span> <span class="o">*</span> <span class="n">blank_x</span><span class="p">[</span><span class="n">ppi</span> <span class="o">-</span> <span class="n">pi</span><span class="p">]</span> <span class="o">+</span> <span class="n">real_y</span><span class="p">[</span><span class="n">pi</span><span class="p">]:</span>
+                <span class="n">ppi</span> <span class="o">-=</span> <span class="mi">1</span>
+            <span class="n">pi</span> <span class="o">=</span> <span class="n">ppi</span>
+            <span class="n">ffi</span> <span class="o">=</span> <span class="n">i</span>
+            <span class="k">while</span> <span class="n">ffi</span> <span class="o">&lt;</span> <span class="n">fi</span> <span class="ow">and</span> <span class="n">real_y</span><span class="p">[</span><span class="n">ffi</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">test_slope</span> <span class="o">*</span> <span class="n">blank_x</span><span class="p">[</span><span class="n">ffi</span> <span class="o">-</span> <span class="n">pi</span><span class="p">]</span> <span class="o">+</span> <span class="n">real_y</span><span class="p">[</span><span class="n">pi</span><span class="p">]:</span>
+                <span class="n">ffi</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">fi</span> <span class="o">=</span> <span class="n">ffi</span>
+
+            <span class="c1"># if we already have some areas, we need to compare min distance and other sanity checks</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">areas</span><span class="p">):</span>
+
+                <span class="c1"># check to make sure the distance between the current past index and future index are greater than the</span>
+                <span class="c1"># most recent peak.</span>
+
+                <span class="n">prev_start</span> <span class="o">=</span> <span class="n">areas</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;x&#39;</span><span class="p">]</span>
+                <span class="n">prev_end</span> <span class="o">=</span> <span class="n">areas</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;x&#39;</span><span class="p">]</span>
+
+
+                <span class="k">if</span> <span class="n">pi</span> <span class="o">-</span> <span class="n">prev_start</span> <span class="o">&gt;</span> <span class="n">min_dist_between_peaks</span> <span class="ow">and</span> <span class="n">prev_end</span> <span class="o">&gt;</span> <span class="n">min_dist_between_peaks</span> <span class="ow">and</span> <span class="n">pi</span> <span class="o">&gt;</span> <span class="n">prev_end</span><span class="p">:</span>
+                    <span class="c1"># make sure the area is greater than minimum area threshold</span>
+                    <span class="n">area</span> <span class="o">=</span> <span class="n">find_area</span><span class="p">(</span><span class="n">pi</span><span class="p">,</span> <span class="n">fi</span><span class="p">,</span> <span class="n">real_y</span><span class="p">,</span> <span class="n">blank_x</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">area</span> <span class="o">&gt;</span> <span class="n">minimum_area</span><span class="p">:</span>
+                        <span class="n">areas</span><span class="o">.</span><span class="n">append</span><span class="p">(({</span><span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="n">pi</span><span class="p">,</span> <span class="s1">&#39;multi&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;sly&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">},</span> <span class="p">{</span><span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="n">fi</span><span class="p">,</span> <span class="s1">&#39;multi&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;sly&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">}))</span>
+
+            <span class="c1"># first peak is free</span>
+            <span class="k">elif</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">areas</span><span class="p">):</span>
+                <span class="n">area</span> <span class="o">=</span> <span class="n">find_area</span><span class="p">(</span><span class="n">pi</span><span class="p">,</span> <span class="n">fi</span><span class="p">,</span> <span class="n">real_y</span><span class="p">,</span> <span class="n">blank_x</span><span class="p">)</span>
+                <span class="c1"># if the area is greater than the minimum add the new peak.</span>
+                <span class="k">if</span> <span class="n">area</span> <span class="o">&gt;</span> <span class="n">minimum_area</span> <span class="ow">and</span> <span class="n">fi</span> <span class="o">-</span> <span class="n">pi</span> <span class="o">&gt;</span> <span class="n">min_dist_between_peaks</span><span class="p">:</span>
+                    <span class="n">areas</span><span class="o">.</span><span class="n">append</span><span class="p">(({</span><span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="n">pi</span><span class="p">,</span> <span class="s1">&#39;multi&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;sly&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">},</span> <span class="p">{</span><span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="n">fi</span><span class="p">,</span> <span class="s1">&#39;multi&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;sly&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">}))</span>
+    <span class="k">return</span> <span class="n">areas</span></div>
+
+
+<div class="viewcode-block" id="splice_peaks"><a class="viewcode-back" href="../../utils.html#chromauto.utils.splice_peaks">[docs]</a><span class="k">def</span> <span class="nf">splice_peaks</span><span class="p">(</span><span class="n">fpks</span><span class="p">,</span> <span class="n">base_y</span><span class="p">,</span> <span class="n">real_y</span><span class="p">,</span> <span class="n">blank_x</span><span class="p">,</span> <span class="n">peak_range</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    With general peak areas sorted, now split up those areas if there are multiple peaks.</span>
+<span class="sd">    This function splits them at the trough between two peaks</span>
+
+<span class="sd">    :param fpks:  list of tuples peaks [({&#39;blank_x&#39;: 3695, &#39;sly&#39;: None, &#39;multi&#39;: False}, {&#39;blank_x&#39;: 4833, &#39;sly&#39;: None, &#39;multi&#39;: False}),]</span>
+<span class="sd">    :param base_y: real y values - blank y values</span>
+<span class="sd">    :param real_y: real y values</span>
+<span class="sd">    :param blank_x: blank x values</span>
+<span class="sd">    :param peak_range:  range of thresholds for peak_detect()</span>
+<span class="sd">    :param kwargs:  special peak_detect settings for a particular range of y values</span>
+<span class="sd">    :return: list of tuples peaks</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">split_min_dist</span> <span class="o">=</span> <span class="mi">100</span> <span class="k">if</span> <span class="s1">&#39;split_min_dist&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="k">else</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;split_min_dist&#39;</span><span class="p">]</span>
+    <span class="n">split_max_peak</span> <span class="o">=</span> <span class="mi">3</span> <span class="k">if</span> <span class="s1">&#39;split_max_peak&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="k">else</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;split_max_peak&#39;</span><span class="p">]</span>
+    <span class="n">split_thres_range</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="o">.</span><span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="s1">&#39;split_thres_range&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="k">else</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;split_thres_range&#39;</span><span class="p">]</span>
+    <span class="n">peak_thres_range</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="o">.</span><span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="s1">&#39;peak_thres_range&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="k">else</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;peak_thres_range&#39;</span><span class="p">]</span>
+
+    <span class="n">peak_splice</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">split_min_area</span> <span class="o">=</span> <span class="o">.</span><span class="mi">005</span> <span class="k">if</span> <span class="s1">&#39;split_min_area&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="k">else</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;split_min_area&#39;</span><span class="p">]</span>
+    <span class="n">last_split</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">split_win_length</span> <span class="o">=</span> <span class="mi">31</span> <span class="k">if</span> <span class="s1">&#39;split_win_length&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="k">else</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;split_win_length&#39;</span><span class="p">]</span>
+    <span class="n">split_polyorder</span> <span class="o">=</span> <span class="mi">5</span> <span class="k">if</span> <span class="s1">&#39;split_polyorder&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="k">else</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;split_polyorder&#39;</span><span class="p">]</span>
+
+    <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">fpks</span><span class="p">):</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">i</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;x&#39;</span><span class="p">]</span>
+        <span class="n">end</span> <span class="o">=</span> <span class="n">i</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;x&#39;</span><span class="p">]</span>
+
+        <span class="n">y_vals</span> <span class="o">=</span> <span class="n">base_y</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+
+        <span class="n">slope</span> <span class="o">=</span> <span class="p">(</span><span class="n">real_y</span><span class="p">[</span><span class="n">end</span><span class="p">]</span> <span class="o">-</span> <span class="n">real_y</span><span class="p">[</span><span class="n">start</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span><span class="n">blank_x</span><span class="p">[</span><span class="n">end</span><span class="p">]</span> <span class="o">-</span> <span class="n">blank_x</span><span class="p">[</span><span class="n">start</span><span class="p">])</span>
+
+        <span class="n">new_peaks</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># smooth the current section for peak detection</span>
+        <span class="n">smoothed_section</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">savgol_filter</span><span class="p">(</span><span class="n">y_vals</span><span class="p">,</span> <span class="n">window_length</span><span class="o">=</span><span class="n">split_win_length</span><span class="p">,</span> <span class="n">polyorder</span><span class="o">=</span><span class="n">split_polyorder</span><span class="p">)</span>
+
+        <span class="c1"># {&#39;range&#39;: (11,13), &#39;thres&#39;: .008&#39;}</span>
+        <span class="n">fidx</span> <span class="o">=</span> <span class="n">peak_detect</span><span class="p">(</span><span class="n">smoothed_section</span><span class="p">,</span> <span class="n">min_dist</span><span class="o">=</span><span class="n">split_min_dist</span><span class="p">,</span> <span class="n">xran</span><span class="o">=</span><span class="n">peak_thres_range</span><span class="p">,</span> <span class="n">max_peak</span><span class="o">=</span><span class="n">split_max_peak</span><span class="p">)</span>
+
+
+        <span class="k">if</span> <span class="n">peak_range</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">peak_range</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">blank_x</span><span class="p">[</span><span class="n">start</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">p</span><span class="p">[</span><span class="s1">&#39;range&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="ow">and</span> <span class="n">blank_x</span><span class="p">[</span><span class="n">end</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">p</span><span class="p">[</span><span class="s1">&#39;range&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>
+
+                    <span class="n">fidx</span> <span class="o">=</span> <span class="n">peak_detect</span><span class="p">(</span><span class="n">smoothed_section</span><span class="p">,</span> <span class="n">min_dist</span><span class="o">=</span><span class="n">split_min_dist</span><span class="p">,</span> <span class="n">max_peak</span><span class="o">=</span><span class="n">split_max_peak</span><span class="p">,</span>
+                                       <span class="n">xran</span><span class="o">=</span><span class="n">split_thres_range</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">fidx</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+
+            <span class="k">for</span> <span class="n">pidx</span><span class="p">,</span> <span class="n">spliced_peak_index</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">fidx</span><span class="p">):</span>
+
+                <span class="n">last_newpeak</span> <span class="o">=</span> <span class="n">start</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_peaks</span><span class="p">)</span> <span class="k">else</span> <span class="n">new_peaks</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;x&#39;</span><span class="p">]</span>
+
+                <span class="k">if</span> <span class="n">pidx</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">fidx</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_peaks</span><span class="p">):</span>
+
+                    <span class="n">sly</span> <span class="o">=</span> <span class="p">(</span><span class="n">slope</span> <span class="o">*</span> <span class="p">(</span><span class="n">blank_x</span><span class="p">[</span><span class="n">end</span><span class="p">]</span> <span class="o">-</span> <span class="n">blank_x</span><span class="p">[</span><span class="n">start</span><span class="p">]))</span> <span class="o">+</span> <span class="n">real_y</span><span class="p">[</span><span class="n">start</span><span class="p">]</span>
+
+                    <span class="n">trapazoid_area</span> <span class="o">=</span> <span class="p">(</span><span class="n">real_y</span><span class="p">[</span><span class="n">end</span><span class="p">]</span> <span class="o">+</span> <span class="n">sly</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">blank_x</span><span class="p">[</span><span class="n">end</span><span class="p">]</span> <span class="o">-</span> <span class="n">blank_x</span><span class="p">[</span><span class="n">last_newpeak</span><span class="p">])</span>
+
+                    <span class="n">peak_area</span> <span class="o">=</span> <span class="n">find_area</span><span class="p">(</span><span class="n">last_newpeak</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">real_y</span><span class="p">,</span> <span class="n">blank_x</span><span class="p">,</span> <span class="n">trapazoid_area</span><span class="p">)</span>
+
+                    <span class="k">if</span> <span class="n">peak_area</span> <span class="o">&gt;</span> <span class="n">split_min_area</span><span class="p">:</span>
+                        <span class="n">new_peaks</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">new_peaks</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="p">{</span><span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="n">end</span><span class="p">,</span> <span class="s1">&#39;multi&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;sly&#39;</span><span class="p">:</span> <span class="n">sly</span><span class="p">}))</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">new_peaks</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;x&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">end</span>
+
+                <span class="k">elif</span> <span class="n">pidx</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">fidx</span><span class="p">):</span>
+
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_peaks</span><span class="p">):</span>
+                        <span class="n">bidx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">real_y</span><span class="p">[</span><span class="n">last_split</span> <span class="o">+</span> <span class="n">start</span><span class="p">:</span><span class="n">start</span> <span class="o">+</span> <span class="n">spliced_peak_index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="n">start</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">bidx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span>
+                            <span class="n">real_y</span><span class="p">[</span><span class="n">start</span> <span class="o">+</span> <span class="n">spliced_peak_index</span><span class="p">:</span><span class="n">start</span> <span class="o">+</span> <span class="n">fidx</span><span class="p">[</span><span class="n">pidx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="n">start</span> <span class="o">+</span> <span class="n">spliced_peak_index</span>
+
+                    <span class="n">sly</span> <span class="o">=</span> <span class="p">(</span><span class="n">slope</span> <span class="o">*</span> <span class="p">(</span><span class="n">blank_x</span><span class="p">[</span><span class="n">bidx</span><span class="p">]</span> <span class="o">-</span> <span class="n">blank_x</span><span class="p">[</span><span class="n">start</span><span class="p">]))</span> <span class="o">+</span> <span class="n">real_y</span><span class="p">[</span><span class="n">start</span><span class="p">]</span>
+
+                    <span class="k">if</span> <span class="n">bidx</span> <span class="o">&gt;</span> <span class="n">last_newpeak</span> <span class="ow">and</span> <span class="n">find_area</span><span class="p">(</span><span class="n">last_newpeak</span><span class="p">,</span> <span class="n">bidx</span><span class="p">,</span> <span class="n">real_y</span><span class="p">,</span> <span class="n">blank_x</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">split_min_area</span><span class="p">:</span>
+                        <span class="n">last_split</span> <span class="o">=</span> <span class="n">spliced_peak_index</span>
+                        <span class="n">new_peaks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                            <span class="p">({</span><span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="n">last_newpeak</span><span class="p">,</span> <span class="s1">&#39;multi&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;sly&#39;</span><span class="p">:</span> <span class="n">sly</span><span class="p">},</span> <span class="p">{</span><span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="n">bidx</span><span class="p">,</span> <span class="s1">&#39;multi&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;sly&#39;</span><span class="p">:</span> <span class="n">sly</span><span class="p">}))</span>
+
+
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_peaks</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">peak_splice</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">&#39;idx&#39;</span><span class="p">:</span> <span class="n">idx</span><span class="p">,</span> <span class="s1">&#39;i&#39;</span><span class="p">:</span> <span class="n">i</span><span class="p">,</span> <span class="s1">&#39;new&#39;</span><span class="p">:</span> <span class="n">new_peaks</span><span class="p">})</span>
+
+    <span class="k">return</span> <span class="n">peak_splice</span></div>
+
+
+
+<div class="viewcode-block" id="sep_peak"><a class="viewcode-back" href="../../utils.html#chromauto.utils.sep_peak">[docs]</a><span class="k">def</span> <span class="nf">sep_peak</span><span class="p">(</span><span class="n">blank_x</span><span class="p">,</span> <span class="n">real_y</span><span class="p">,</span> <span class="n">base_y</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">peak_element</span><span class="p">,</span> <span class="n">fpks</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    If in a special range of split peaks, then take the first and last split peaks of area,</span>
+<span class="sd">    then shave last peak area from first, and first area from the second.</span>
+<span class="sd">    Only return the &#39;bump&#39; of the last peak from the slope of the first peak</span>
+
+<span class="sd">    :param blank_x: blank_x values</span>
+<span class="sd">    :param real_y: eal y values</span>
+<span class="sd">    :param base_y: real y values minus blank y values</span>
+<span class="sd">    :param idx: index of list of tuples peaks</span>
+<span class="sd">    :param peak_element:  element of list of tuples peaks</span>
+<span class="sd">    :param fpks:  list of tuples peaks [({&#39;x&#39;: 3695, &#39;sly&#39;: None, &#39;multi&#39;: False}, {&#39;x&#39;: 4833, &#39;sly&#39;: None, &#39;multi&#39;: False}),]</span>
+<span class="sd">    :param kwargs:  special peak_detect settings for a particular range of y values</span>
+<span class="sd">    :return: list of tuples peaks</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">split_min_dist</span> <span class="o">=</span> <span class="mi">100</span> <span class="k">if</span> <span class="s1">&#39;split_min_dist&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="k">else</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;split_min_dist&#39;</span><span class="p">]</span>
+    <span class="n">split_max_peak</span> <span class="o">=</span> <span class="mi">3</span> <span class="k">if</span> <span class="s1">&#39;split_max_peak&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="k">else</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;split_max_peak&#39;</span><span class="p">]</span>
+    <span class="n">split_thres_range</span> <span class="o">=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="s1">&#39;split_thres_range&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="k">else</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;split_thres_range&#39;</span><span class="p">]</span>
+    <span class="n">split_win_length</span> <span class="o">=</span> <span class="mi">100</span> <span class="k">if</span> <span class="s1">&#39;split_win_length&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="k">else</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;split_win_length&#39;</span><span class="p">]</span>
+    <span class="n">split_polyorder</span> <span class="o">=</span> <span class="mi">3</span> <span class="k">if</span> <span class="s1">&#39;split_polyorder&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="k">else</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;split_polyorder&#39;</span><span class="p">]</span>
+
+
+
+    <span class="k">if</span> <span class="n">peak_element</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;multi&#39;</span><span class="p">]:</span>
+        <span class="n">startx</span> <span class="o">=</span> <span class="n">peak_element</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;x&#39;</span><span class="p">]</span>
+        <span class="n">endx</span> <span class="o">=</span> <span class="n">peak_element</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;x&#39;</span><span class="p">]</span>
+        <span class="n">second_peak</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="n">idx</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+
+            <span class="c1"># If we are on first peak or later peaks</span>
+            <span class="k">if</span> <span class="n">startx</span> <span class="o">==</span> <span class="n">fpks</span><span class="p">[</span><span class="n">idx</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;x&#39;</span><span class="p">]:</span>
+                <span class="c1"># second split peak</span>
+                <span class="c1"># change endx to final blank_x of split peak</span>
+                <span class="n">second_peak</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">split_x</span> <span class="o">=</span> <span class="n">startx</span>
+                <span class="n">startx</span> <span class="o">=</span> <span class="n">fpks</span><span class="p">[</span><span class="n">idx</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;x&#39;</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">split_x</span> <span class="o">=</span> <span class="n">endx</span>
+                <span class="n">endx</span> <span class="o">=</span> <span class="n">fpks</span><span class="p">[</span><span class="n">idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;x&#39;</span><span class="p">]</span>
+                <span class="n">fpks</span><span class="p">[</span><span class="n">idx</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;area&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">find_area</span><span class="p">(</span><span class="n">startx</span><span class="p">,</span> <span class="n">endx</span><span class="p">,</span> <span class="n">real_y</span><span class="p">,</span> <span class="n">blank_x</span><span class="p">)</span>
+
+            <span class="n">smoothed_section</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">savgol_filter</span><span class="p">(</span><span class="n">base_y</span><span class="p">[</span><span class="n">startx</span><span class="p">:</span><span class="n">endx</span><span class="p">],</span> <span class="n">window_length</span><span class="o">=</span><span class="n">split_win_length</span><span class="p">,</span>
+                                                    <span class="n">polyorder</span><span class="o">=</span><span class="n">split_polyorder</span><span class="p">)</span>
+
+            <span class="c1"># detect peaks in the range</span>
+            <span class="n">cv</span> <span class="o">=</span> <span class="n">peak_detect</span><span class="p">(</span><span class="n">smoothed_section</span><span class="p">,</span> <span class="n">split_thres_range</span><span class="p">,</span> <span class="n">split_min_dist</span><span class="p">,</span> <span class="n">split_max_peak</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cv</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+
+                <span class="n">mid_x</span> <span class="o">=</span> <span class="p">(</span><span class="n">cv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">startx</span> <span class="o">-</span> <span class="n">split_x</span><span class="p">)</span> <span class="o">*</span> <span class="mi">3</span> <span class="o">+</span> <span class="n">split_x</span>
+
+
+
+                <span class="n">ly</span> <span class="o">=</span> <span class="p">(</span><span class="n">real_y</span><span class="p">[</span><span class="n">mid_x</span><span class="p">]</span> <span class="o">-</span> <span class="n">real_y</span><span class="p">[</span><span class="n">split_x</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span><span class="n">blank_x</span><span class="p">[</span><span class="n">mid_x</span><span class="p">]</span> <span class="o">-</span> <span class="n">blank_x</span><span class="p">[</span><span class="n">split_x</span><span class="p">])</span>
+
+                <span class="k">for</span> <span class="n">widx</span><span class="p">,</span> <span class="n">w</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">real_y</span><span class="p">[</span><span class="n">cv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">startx</span><span class="p">:]):</span>
+                    <span class="k">if</span> <span class="n">w</span> <span class="o">&lt;</span> <span class="p">(</span><span class="n">blank_x</span><span class="p">[</span><span class="n">cv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">startx</span> <span class="o">+</span> <span class="n">widx</span><span class="p">]</span> <span class="o">-</span> <span class="n">blank_x</span><span class="p">[</span><span class="n">split_x</span><span class="p">])</span> <span class="o">*</span> <span class="n">ly</span> <span class="o">+</span> <span class="n">real_y</span><span class="p">[</span><span class="n">split_x</span><span class="p">]:</span>
+                        <span class="n">mid_x</span> <span class="o">=</span> <span class="n">cv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">startx</span> <span class="o">+</span> <span class="n">widx</span>
+                        <span class="k">break</span>
+
+                <span class="k">if</span> <span class="n">second_peak</span><span class="p">:</span>
+                    <span class="c1"># second split peak</span>
+                    <span class="c1"># change endx to final blank_x of split peak</span>
+                    <span class="n">startx</span> <span class="o">=</span> <span class="n">split_x</span>
+                    <span class="n">endx</span> <span class="o">=</span> <span class="n">mid_x</span>
+
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">mid_values</span> <span class="o">=</span> <span class="p">[(</span><span class="n">blank_x</span><span class="p">[</span><span class="n">v</span><span class="p">]</span> <span class="o">-</span> <span class="n">blank_x</span><span class="p">[</span><span class="n">split_x</span><span class="p">])</span> <span class="o">*</span> <span class="n">ly</span> <span class="o">+</span> <span class="n">real_y</span><span class="p">[</span><span class="n">split_x</span><span class="p">]</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">split_x</span><span class="p">,</span> <span class="n">mid_x</span><span class="p">)]</span>
+                    <span class="n">real_y</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">real_y</span><span class="p">[:</span><span class="n">split_x</span><span class="p">])</span> <span class="o">+</span> <span class="n">mid_values</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">real_y</span><span class="p">[</span><span class="n">mid_x</span><span class="p">:])</span>
+                    <span class="n">real_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">real_y</span><span class="p">)</span>
+
+                <span class="n">ix</span> <span class="o">=</span> <span class="n">blank_x</span><span class="p">[</span><span class="n">startx</span><span class="p">:</span><span class="n">endx</span><span class="p">]</span>
+                <span class="n">iy</span> <span class="o">=</span> <span class="n">real_y</span><span class="p">[</span><span class="n">startx</span><span class="p">:</span><span class="n">endx</span><span class="p">]</span>
+                <span class="n">start_vert</span> <span class="o">=</span> <span class="n">real_y</span><span class="p">[</span><span class="n">startx</span><span class="p">]</span>
+                <span class="n">end_vert</span> <span class="o">=</span> <span class="n">real_y</span><span class="p">[</span><span class="n">endx</span><span class="p">]</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+
+
+
+            <span class="n">verts</span> <span class="o">=</span> <span class="p">[(</span><span class="n">blank_x</span><span class="p">[</span><span class="n">startx</span><span class="p">],</span> <span class="n">start_vert</span><span class="p">)]</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">ix</span><span class="p">,</span> <span class="n">iy</span><span class="p">))</span> <span class="o">+</span> <span class="p">[(</span><span class="n">blank_x</span><span class="p">[</span><span class="n">endx</span><span class="p">],</span> <span class="n">end_vert</span><span class="p">)]</span>
+            <span class="n">poly</span> <span class="o">=</span> <span class="n">Polygon</span><span class="p">(</span><span class="n">verts</span><span class="p">,</span> <span class="n">facecolor</span><span class="o">=</span><span class="s1">&#39;0.9&#39;</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s1">&#39;0.5&#39;</span><span class="p">)</span>
+            <span class="n">ly</span> <span class="o">=</span> <span class="p">(</span><span class="n">real_y</span><span class="p">[</span><span class="n">startx</span><span class="p">]</span> <span class="o">+</span> <span class="n">real_y</span><span class="p">[</span><span class="n">endx</span><span class="p">])</span> <span class="o">/</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">blank_x</span><span class="p">[</span><span class="n">endx</span><span class="p">]</span> <span class="o">-</span> <span class="n">blank_x</span><span class="p">[</span><span class="n">startx</span><span class="p">])</span>
+
+            <span class="n">area</span> <span class="o">=</span> <span class="n">find_area</span><span class="p">(</span><span class="n">startx</span><span class="p">,</span> <span class="n">endx</span><span class="p">,</span> <span class="n">real_y</span><span class="p">,</span> <span class="n">blank_x</span><span class="p">,</span> <span class="n">ly</span><span class="p">)</span>
+
+
+            <span class="n">cout</span> <span class="o">=</span> <span class="p">[</span><span class="n">area</span><span class="p">,</span> <span class="n">blank_x</span><span class="p">[</span><span class="n">startx</span><span class="p">],</span> <span class="n">blank_x</span><span class="p">[</span><span class="n">endx</span><span class="p">]]</span>
+
+            <span class="n">axis_x</span> <span class="o">=</span> <span class="p">(</span><span class="n">blank_x</span><span class="p">[</span><span class="n">startx</span> <span class="o">-</span> <span class="mi">150</span><span class="p">],</span> <span class="n">blank_x</span><span class="p">[</span><span class="nb">min</span><span class="p">(</span><span class="n">endx</span> <span class="o">+</span> <span class="mi">150</span><span class="p">,</span> <span class="n">blank_x</span><span class="o">.</span><span class="n">size</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)])</span>
+            <span class="n">axis_y</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">real_y</span><span class="p">[</span><span class="n">startx</span><span class="p">:</span><span class="n">endx</span><span class="p">])</span> <span class="o">-</span> <span class="mf">0.4</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">real_y</span><span class="p">[</span><span class="n">startx</span><span class="p">:</span><span class="n">endx</span><span class="p">])</span> <span class="o">+</span> <span class="o">.</span><span class="mi">4</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">poly</span><span class="p">,</span> <span class="n">area</span><span class="p">,</span> <span class="n">cout</span><span class="p">,</span> <span class="n">axis_x</span><span class="p">,</span> <span class="n">axis_y</span><span class="p">]</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="k">return</span> <span class="kc">False</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">chromauto</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../utils.html">utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ch_parser.html">ch_parser</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Author.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

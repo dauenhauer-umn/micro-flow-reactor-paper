@@ -1,0 +1,276 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>ch_parser &#8212; chromauto  documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="utils" href="utils.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-chromauto.ch_parser">
+<span id="ch-parser"></span><h1>ch_parser<a class="headerlink" href="#module-chromauto.ch_parser" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="chromauto.ch_parser.CHFile">
+<em class="property">class </em><code class="sig-prename descclassname">chromauto.ch_parser.</code><code class="sig-name descname">CHFile</code><span class="sig-paren">(</span><em class="sig-param">filepath</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/chromauto/ch_parser.html#CHFile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#chromauto.ch_parser.CHFile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class that implements the Agilent .ch file format version 179 or 181</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Not all aspects of the file header is understood, so there may and probably
+is information that is not parsed. See the method <code class="xref py py-meth docutils literal notranslate"><span class="pre">_parse_header_status()</span></code> for
+an overview of which parts of the header is understood.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the fundamental storage of the actual data has change, lots of
+inspiration for the parsing of the header has been drawn from the parser in the
+<a class="reference external" href="https://github.com/chemplexity/chromatography/blob/dev/Methods/Import/ImportAgilent.m">ImportAgilent.m file</a> in the <a class="reference external" href="https://github.com/chemplexity/chromatography">chemplexity/chromatography project</a> project. All credit for the parts
+of the header parsing that could be reused goes to the author of that project.</p>
+</div>
+<dl class="attribute">
+<dt id="chromauto.ch_parser.CHFile.values">
+<code class="sig-name descname">values</code><a class="headerlink" href="#chromauto.ch_parser.CHFile.values" title="Permalink to this definition">¶</a></dt>
+<dd><p>The intensity values (y-value) or the spectrum. The unit
+for the values is given in <cite>metadata[‘units’]</cite></p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>numpy.array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="chromauto.ch_parser.CHFile.metadata">
+<code class="sig-name descname">metadata</code><a class="headerlink" href="#chromauto.ch_parser.CHFile.metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>The extracted metadata</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="chromauto.ch_parser.CHFile.filepath">
+<code class="sig-name descname">filepath</code><a class="headerlink" href="#chromauto.ch_parser.CHFile.filepath" title="Permalink to this definition">¶</a></dt>
+<dd><p>The filepath this object was loaded from</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="chromauto.ch_parser.CHFile.data_start">
+<code class="sig-name descname">data_start</code><em class="property"> = 6144</em><a class="headerlink" href="#chromauto.ch_parser.CHFile.data_start" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="chromauto.ch_parser.CHFile.fields">
+<code class="sig-name descname">fields</code><em class="property"> = (('sequence_line_or_injection', 252, '&gt;H'), ('injection_or_sequence_line', 256, '&gt;H'), ('start_time', 282, 'x-time'), ('end_time', 286, 'x-time'), ('version_string', 326, 'utf16'), ('description', 347, 'utf16'), ('sample', 858, 'utf16'), ('operator', 1880, 'utf16'), ('date', 2391, 'utf16'), ('inlet', 2492, 'utf16'), ('instrument', 2533, 'utf16'), ('method', 2574, 'utf16'), ('software version', 3601, 'utf16'), ('software name', 3089, 'utf16'), ('software revision', 3802, 'utf16'), ('units', 4172, 'utf16'), ('detector', 4213, 'utf16'), ('yscaling', 4732, '&gt;d'))</em><a class="headerlink" href="#chromauto.ch_parser.CHFile.fields" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="chromauto.ch_parser.CHFile.fields_revtwo">
+<code class="sig-name descname">fields_revtwo</code><em class="property"> = (('sequence_line_or_injection', 252, '&gt;H'), ('injection_or_sequence_line', 256, '&gt;H'), ('start_time', 282, 'x-time'), ('end_time', 286, 'x-time'), ('version_string', 326, 'utf16'), ('description', 347, 'utf16'), ('sample', 858, 'utf16'), ('operator', 1880, 'utf16'), ('date', 2391, 'utf16'), ('inlet', 2492, 'utf16'), ('instrument', 2533, 'utf16'), ('method', 2574, 'utf16'), ('units', 4172, 'utf16'), ('detector', 4213, 'utf16'), ('yscaling', 4732, '&gt;d'))</em><a class="headerlink" href="#chromauto.ch_parser.CHFile.fields_revtwo" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="chromauto.ch_parser.CHFile.supported_versions">
+<code class="sig-name descname">supported_versions</code><em class="property"> = {179, 181}</em><a class="headerlink" href="#chromauto.ch_parser.CHFile.supported_versions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="chromauto.ch_parser.CHFile.times">
+<code class="sig-name descname">times</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/chromauto/ch_parser.html#CHFile.times"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#chromauto.ch_parser.CHFile.times" title="Permalink to this definition">¶</a></dt>
+<dd><p>The time values (x-value) for the data set in minutes</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="chromauto.ch_parser.MSFile">
+<em class="property">class </em><code class="sig-prename descclassname">chromauto.ch_parser.</code><code class="sig-name descname">MSFile</code><span class="sig-paren">(</span><em class="sig-param">filepath</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/chromauto/ch_parser.html#MSFile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#chromauto.ch_parser.MSFile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class that implements the Agilent .ms file format (mass spectrometry instrument)</p>
+<dl class="attribute">
+<dt id="chromauto.ch_parser.MSFile.xic_values">
+<code class="sig-name descname">xic_values</code><a class="headerlink" href="#chromauto.ch_parser.MSFile.xic_values" title="Permalink to this definition">¶</a></dt>
+<dd><p>The intensity values of the mass spec</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>numpy.array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="chromauto.ch_parser.MSFile.tic_values">
+<code class="sig-name descname">tic_values</code><a class="headerlink" href="#chromauto.ch_parser.MSFile.tic_values" title="Permalink to this definition">¶</a></dt>
+<dd><p>The intensity values (y-value)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="chromauto.ch_parser.MSFile.times">
+<code class="sig-name descname">times</code><a class="headerlink" href="#chromauto.ch_parser.MSFile.times" title="Permalink to this definition">¶</a></dt>
+<dd><p>Time for the x-values</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="chromauto.ch_parser.MSFile.metadata">
+<code class="sig-name descname">metadata</code><a class="headerlink" href="#chromauto.ch_parser.MSFile.metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>The extracted metadata</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="chromauto.ch_parser.MSFile.filepath">
+<code class="sig-name descname">filepath</code><a class="headerlink" href="#chromauto.ch_parser.MSFile.filepath" title="Permalink to this definition">¶</a></dt>
+<dd><p>The filepath this object was loaded from</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="chromauto.ch_parser.MSFile.data_start">
+<code class="sig-name descname">data_start</code><em class="property"> = 5771</em><a class="headerlink" href="#chromauto.ch_parser.MSFile.data_start" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="chromauto.ch_parser.MSFile.fields">
+<code class="sig-name descname">fields</code><em class="property"> = (('sample', 24, 'utf8'), ('description', 86, 'utf8'), ('sequence', 252, '&gt;h'), ('vial', 253, '&gt;h'), ('replicate', 254, '&gt;h'), ('method', 228, 'utf8'), ('operator', 148, 'utf8'), ('date', 178, 'utf8'), ('instrument', 208, 'utf8'), ('scans', 278, '&gt;I'))</em><a class="headerlink" href="#chromauto.ch_parser.MSFile.fields" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="chromauto.ch_parser.MSFile.supported_versions">
+<code class="sig-name descname">supported_versions</code><em class="property"> = [2]</em><a class="headerlink" href="#chromauto.ch_parser.MSFile.supported_versions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="chromauto.ch_parser.parse_utf16_string">
+<code class="sig-prename descclassname">chromauto.ch_parser.</code><code class="sig-name descname">parse_utf16_string</code><span class="sig-paren">(</span><em class="sig-param">file_</em>, <em class="sig-param">encoding='UTF16'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/chromauto/ch_parser.html#parse_utf16_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#chromauto.ch_parser.parse_utf16_string" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse a pascal type UTF16 encoded string from a binary file object</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="chromauto.ch_parser.parse_utf_string">
+<code class="sig-prename descclassname">chromauto.ch_parser.</code><code class="sig-name descname">parse_utf_string</code><span class="sig-paren">(</span><em class="sig-param">file_</em>, <em class="sig-param">encoding='UTF8'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/chromauto/ch_parser.html#parse_utf_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#chromauto.ch_parser.parse_utf_string" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse a pascal type UTF16 encoded string from a binary file object</p>
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">chromauto</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="utils.html">utils</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">ch_parser</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="utils.html" title="previous chapter">utils</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Author.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/ch_parser.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

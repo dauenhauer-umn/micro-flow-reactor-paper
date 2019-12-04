@@ -1,0 +1,257 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>utils &#8212; chromauto  documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="ch_parser" href="ch_parser.html" />
+    <link rel="prev" title="Welcome to chromauto’s documentation!" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-chromauto.utils">
+<span id="utils"></span><h1>utils<a class="headerlink" href="#module-chromauto.utils" title="Permalink to this headline">¶</a></h1>
+<dl class="function">
+<dt id="chromauto.utils.add_plot">
+<code class="sig-prename descclassname">chromauto.utils.</code><code class="sig-name descname">add_plot</code><span class="sig-paren">(</span><em class="sig-param">ax</em>, <em class="sig-param">i</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/chromauto/utils.html#add_plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#chromauto.utils.add_plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience function for generating an overview image</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ax</strong> – the pyplot.ax object</p></li>
+<li><p><strong>i</strong> – the dictionary of attributes for the plot {‘axis’,’plots’,’txt’,’patch’}</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="chromauto.utils.find_area">
+<code class="sig-prename descclassname">chromauto.utils.</code><code class="sig-name descname">find_area</code><span class="sig-paren">(</span><em class="sig-param">startx</em>, <em class="sig-param">endx</em>, <em class="sig-param">real_y</em>, <em class="sig-param">blank_x</em>, <em class="sig-param">trapazoid_area=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/chromauto/utils.html#find_area"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#chromauto.utils.find_area" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find area under curve using trapeszoidal rule.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>startx</strong> – starting index</p></li>
+<li><p><strong>endx</strong> – ending index</p></li>
+<li><p><strong>real_y</strong> – array of y values</p></li>
+<li><p><strong>blank_x</strong> – array of blank_x values</p></li>
+<li><p><strong>ly</strong> – custom trapazoid area to subtract from composite trapezoidal rule.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>area beneath the curve</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="chromauto.utils.normalize_baseline">
+<code class="sig-prename descclassname">chromauto.utils.</code><code class="sig-name descname">normalize_baseline</code><span class="sig-paren">(</span><em class="sig-param">blank_x</em>, <em class="sig-param">blank_y</em>, <em class="sig-param">data_x</em>, <em class="sig-param">data_y</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/chromauto/utils.html#normalize_baseline"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#chromauto.utils.normalize_baseline" title="Permalink to this definition">¶</a></dt>
+<dd><ol class="arabic simple">
+<li><p>Normalize baseline by smoothing out data &amp; blank run y values</p></li>
+<li><p>subtract them</p></li>
+<li><p>inverting result</p></li>
+<li><p>finding sparse peaks in that results</p></li>
+<li><p>removing interpolating between those peaks.</p></li>
+</ol>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>blank_x</strong> – blank y values</p></li>
+<li><p><strong>blank_y</strong> – blank blank_x values</p></li>
+<li><p><strong>data_x</strong> – data y values</p></li>
+<li><p><strong>data_y</strong> – data blank_x values</p></li>
+<li><p><strong>kwargs</strong> – settings dictionary</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>(normalized blank blank_x values, normalized blank y values)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="chromauto.utils.peak_detect">
+<code class="sig-prename descclassname">chromauto.utils.</code><code class="sig-name descname">peak_detect</code><span class="sig-paren">(</span><em class="sig-param">y_val</em>, <em class="sig-param">xran=(3</em>, <em class="sig-param">10)</em>, <em class="sig-param">min_dist=300</em>, <em class="sig-param">max_peak=10</em>, <em class="sig-param">thres=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/chromauto/utils.html#peak_detect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#chromauto.utils.peak_detect" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>y_val</strong> – array of y values to evaluate for peaks</p></li>
+<li><p><strong>xran</strong> – range of thresholds to iterate through</p></li>
+<li><p><strong>min_dist</strong> – minimum distance between peaks</p></li>
+<li><p><strong>max_peak</strong> – maximum number of peaks to detect</p></li>
+<li><p><strong>thres</strong> – manually set threshold</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>indices of the peaks</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="chromauto.utils.sep_peak">
+<code class="sig-prename descclassname">chromauto.utils.</code><code class="sig-name descname">sep_peak</code><span class="sig-paren">(</span><em class="sig-param">blank_x</em>, <em class="sig-param">real_y</em>, <em class="sig-param">base_y</em>, <em class="sig-param">idx</em>, <em class="sig-param">peak_element</em>, <em class="sig-param">fpks</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/chromauto/utils.html#sep_peak"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#chromauto.utils.sep_peak" title="Permalink to this definition">¶</a></dt>
+<dd><p>If in a special range of split peaks, then take the first and last split peaks of area,
+then shave last peak area from first, and first area from the second.
+Only return the ‘bump’ of the last peak from the slope of the first peak</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>blank_x</strong> – blank_x values</p></li>
+<li><p><strong>real_y</strong> – eal y values</p></li>
+<li><p><strong>base_y</strong> – real y values minus blank y values</p></li>
+<li><p><strong>idx</strong> – index of list of tuples peaks</p></li>
+<li><p><strong>peak_element</strong> – element of list of tuples peaks</p></li>
+<li><p><strong>fpks</strong> – list of tuples peaks [({‘x’: 3695, ‘sly’: None, ‘multi’: False}, {‘x’: 4833, ‘sly’: None, ‘multi’: False}),]</p></li>
+<li><p><strong>kwargs</strong> – special peak_detect settings for a particular range of y values</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>list of tuples peaks</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="chromauto.utils.splice_peaks">
+<code class="sig-prename descclassname">chromauto.utils.</code><code class="sig-name descname">splice_peaks</code><span class="sig-paren">(</span><em class="sig-param">fpks</em>, <em class="sig-param">base_y</em>, <em class="sig-param">real_y</em>, <em class="sig-param">blank_x</em>, <em class="sig-param">peak_range=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/chromauto/utils.html#splice_peaks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#chromauto.utils.splice_peaks" title="Permalink to this definition">¶</a></dt>
+<dd><p>With general peak areas sorted, now split up those areas if there are multiple peaks.
+This function splits them at the trough between two peaks</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fpks</strong> – list of tuples peaks [({‘blank_x’: 3695, ‘sly’: None, ‘multi’: False}, {‘blank_x’: 4833, ‘sly’: None, ‘multi’: False}),]</p></li>
+<li><p><strong>base_y</strong> – real y values - blank y values</p></li>
+<li><p><strong>real_y</strong> – real y values</p></li>
+<li><p><strong>blank_x</strong> – blank x values</p></li>
+<li><p><strong>peak_range</strong> – range of thresholds for peak_detect()</p></li>
+<li><p><strong>kwargs</strong> – special peak_detect settings for a particular range of y values</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>list of tuples peaks</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="chromauto.utils.walk_peaks">
+<code class="sig-prename descclassname">chromauto.utils.</code><code class="sig-name descname">walk_peaks</code><span class="sig-paren">(</span><em class="sig-param">indices</em>, <em class="sig-param">real_y</em>, <em class="sig-param">blank_y</em>, <em class="sig-param">blank_x</em>, <em class="sig-param">max_x</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/chromauto/utils.html#walk_peaks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#chromauto.utils.walk_peaks" title="Permalink to this definition">¶</a></dt>
+<dd><blockquote>
+<div><p>Walk backwards and forwards from the peak index</p>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>indices</strong> – (list) List of peak indices from peak_detect</p></li>
+<li><p><strong>(</strong><strong>array</strong><strong>)</strong> (<em>blank_x</em>) – real y values</p></li>
+<li><p><strong>(</strong><strong>array</strong><strong>)</strong> – blank y values</p></li>
+<li><p><strong>(</strong><strong>array</strong><strong>)</strong> – blank x values</p></li>
+<li><p><strong>(</strong><strong>int</strong><strong>)</strong> (<em>max_x</em>) – max index for arrays</p></li>
+<li><p><strong>kwargs</strong> – settings dictionary</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">chromauto</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ch_parser.html">ch_parser</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Welcome to chromauto’s documentation!</a></li>
+      <li>Next: <a href="ch_parser.html" title="next chapter">ch_parser</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Author.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/utils.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

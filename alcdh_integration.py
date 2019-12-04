@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from scipy import signal
 
-from utils import find_area, add_plot, walk_peaks, peak_detect
+from chromauto.utils import find_area, add_plot, walk_peaks, peak_detect
 
 import csv
 

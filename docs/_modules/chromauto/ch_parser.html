@@ -1,0 +1,391 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>chromauto.ch_parser &#8212; chromauto  documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for chromauto.ch_parser</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">NODOC:</span>
+<span class="sd">    File parser for Chemstation files</span>
+<span class="sd">    Copyright (C) 2015-2018 CINF team on GitHub: https://github.com/CINF</span>
+<span class="sd">    The General Stepped Program Runner is free software: you can</span>
+<span class="sd">    redistribute it and/or modify it under the terms of the GNU</span>
+<span class="sd">    General Public License as published by the Free Software</span>
+<span class="sd">    Foundation, either version 3 of the License, or</span>
+<span class="sd">    (at your option) any later version.</span>
+<span class="sd">    The General Stepped Program Runner is distributed in the hope</span>
+<span class="sd">    that it will be useful, but WITHOUT ANY WARRANTY; without even</span>
+<span class="sd">    the implied warranty of MERCHANTABILITY or FITNESS FOR A</span>
+<span class="sd">    PARTICULAR PURPOSE.  See the GNU General Public License for more</span>
+<span class="sd">    details.</span>
+<span class="sd">    You should have received a copy of the GNU General Public License</span>
+<span class="sd">    along with The CINF Data Presentation Website.  If not, see</span>
+<span class="sd">    &lt;http://www.gnu.org/licenses/&gt;.</span>
+<span class="sd">    .. note:: This file parser went through a large re-write on ??? which</span>
+<span class="sd">       changed the data structures of the resulting objects. This means</span>
+<span class="sd">       that upon upgrading it *will* be necessary to update code. The</span>
+<span class="sd">       re-write was done to fix some serious errors from the first</span>
+<span class="sd">       version, like relying on the Report.TXT file for injections</span>
+<span class="sd">       summaries. These are now fetched from the more ordered CSV files.</span>
+<span class="sd">NODOC</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">struct</span>
+<span class="kn">from</span> <span class="nn">struct</span> <span class="k">import</span> <span class="n">unpack</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">from</span> <span class="nn">dateutil.parser</span> <span class="k">import</span> <span class="n">parse</span> <span class="k">as</span> <span class="n">date_parser</span>
+
+<span class="n">ENDIAN</span> <span class="o">=</span> <span class="s1">&#39;&gt;&#39;</span>
+<span class="n">STRING</span> <span class="o">=</span> <span class="n">ENDIAN</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">s&#39;</span>
+<span class="n">UINT8</span> <span class="o">=</span> <span class="n">ENDIAN</span> <span class="o">+</span> <span class="s1">&#39;B&#39;</span>
+<span class="n">UINT16</span> <span class="o">=</span> <span class="n">ENDIAN</span> <span class="o">+</span> <span class="s1">&#39;H&#39;</span>
+<span class="n">INT16</span> <span class="o">=</span> <span class="n">ENDIAN</span> <span class="o">+</span> <span class="s1">&#39;h&#39;</span>
+<span class="n">INT32</span> <span class="o">=</span> <span class="n">ENDIAN</span> <span class="o">+</span> <span class="s1">&#39;i&#39;</span>
+<span class="n">UINT32</span> <span class="o">=</span> <span class="n">ENDIAN</span> <span class="o">+</span> <span class="s1">&#39;I&#39;</span>
+
+
+<div class="viewcode-block" id="parse_utf16_string"><a class="viewcode-back" href="../../ch_parser.html#chromauto.ch_parser.parse_utf16_string">[docs]</a><span class="k">def</span> <span class="nf">parse_utf16_string</span><span class="p">(</span><span class="n">file_</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;UTF16&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Parse a pascal type UTF16 encoded string from a binary file object&quot;&quot;&quot;</span>
+    <span class="n">string_length</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="n">UINT8</span><span class="p">,</span> <span class="n">file_</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">1</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">parsed</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="n">STRING</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">string_length</span><span class="p">),</span> <span class="n">file_</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">string_length</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">parsed</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">encoding</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CHFile"><a class="viewcode-back" href="../../ch_parser.html#chromauto.ch_parser.CHFile">[docs]</a><span class="k">class</span> <span class="nc">CHFile</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class that implements the Agilent .ch file format version 179 or 181</span>
+
+<span class="sd">    .. warning:: Not all aspects of the file header is understood, so there may and probably</span>
+<span class="sd">       is information that is not parsed. See the method :meth:`._parse_header_status` for</span>
+<span class="sd">       an overview of which parts of the header is understood.</span>
+
+<span class="sd">    .. note:: Although the fundamental storage of the actual data has change, lots of</span>
+<span class="sd">       inspiration for the parsing of the header has been drawn from the parser in the</span>
+<span class="sd">       `ImportAgilent.m file &lt;https://github.com/chemplexity/chromatography/blob/dev/</span>
+<span class="sd">       Methods/Import/ImportAgilent.m&gt;`_ in the `chemplexity/chromatography project</span>
+<span class="sd">       &lt;https://github.com/chemplexity/chromatography&gt;`_ project. All credit for the parts</span>
+<span class="sd">       of the header parsing that could be reused goes to the author of that project.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        values (numpy.array): The intensity values (y-value) or the spectrum. The unit</span>
+<span class="sd">            for the values is given in `metadata[&#39;units&#39;]`</span>
+<span class="sd">        metadata (dict): The extracted metadata</span>
+<span class="sd">        filepath (str): The filepath this object was loaded from</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">fields</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="p">(</span><span class="s1">&#39;sequence_line_or_injection&#39;</span><span class="p">,</span> <span class="mi">252</span><span class="p">,</span> <span class="n">UINT16</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;injection_or_sequence_line&#39;</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="n">UINT16</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;start_time&#39;</span><span class="p">,</span> <span class="mi">282</span><span class="p">,</span> <span class="s1">&#39;x-time&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;end_time&#39;</span><span class="p">,</span> <span class="mi">286</span><span class="p">,</span> <span class="s1">&#39;x-time&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;version_string&#39;</span><span class="p">,</span> <span class="mi">326</span><span class="p">,</span> <span class="s1">&#39;utf16&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;description&#39;</span><span class="p">,</span> <span class="mi">347</span><span class="p">,</span> <span class="s1">&#39;utf16&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;sample&#39;</span><span class="p">,</span> <span class="mi">858</span><span class="p">,</span> <span class="s1">&#39;utf16&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;operator&#39;</span><span class="p">,</span> <span class="mi">1880</span><span class="p">,</span> <span class="s1">&#39;utf16&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;date&#39;</span><span class="p">,</span> <span class="mi">2391</span><span class="p">,</span> <span class="s1">&#39;utf16&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;inlet&#39;</span><span class="p">,</span> <span class="mi">2492</span><span class="p">,</span> <span class="s1">&#39;utf16&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;instrument&#39;</span><span class="p">,</span> <span class="mi">2533</span><span class="p">,</span> <span class="s1">&#39;utf16&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;method&#39;</span><span class="p">,</span> <span class="mi">2574</span><span class="p">,</span> <span class="s1">&#39;utf16&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;software version&#39;</span><span class="p">,</span> <span class="mi">3601</span><span class="p">,</span> <span class="s1">&#39;utf16&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;software name&#39;</span><span class="p">,</span> <span class="mi">3089</span><span class="p">,</span> <span class="s1">&#39;utf16&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;software revision&#39;</span><span class="p">,</span> <span class="mi">3802</span><span class="p">,</span> <span class="s1">&#39;utf16&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;units&#39;</span><span class="p">,</span> <span class="mi">4172</span><span class="p">,</span> <span class="s1">&#39;utf16&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;detector&#39;</span><span class="p">,</span> <span class="mi">4213</span><span class="p">,</span> <span class="s1">&#39;utf16&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;yscaling&#39;</span><span class="p">,</span> <span class="mi">4732</span><span class="p">,</span> <span class="n">ENDIAN</span> <span class="o">+</span> <span class="s1">&#39;d&#39;</span><span class="p">))</span>
+    <span class="n">fields_revtwo</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">3601</span><span class="p">,</span> <span class="mi">3089</span><span class="p">,</span> <span class="mi">3802</span><span class="p">),</span> <span class="n">fields</span><span class="p">))</span>
+    <span class="n">data_start</span> <span class="o">=</span> <span class="mi">6144</span>
+    <span class="n">supported_versions</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="mi">179</span><span class="p">,</span> <span class="mi">181</span><span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Instantiate object</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            filepath (str): The path of the data file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filepath</span> <span class="o">=</span> <span class="n">filepath</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filepath</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="p">(</span><span class="n">file_</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_parse_header</span><span class="p">(</span><span class="n">file_</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;magic_number_version&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">179</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_data</span><span class="p">(</span><span class="n">file_</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;magic_number_version&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">181</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_data_decompress</span><span class="p">(</span><span class="n">file_</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_parse_header</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Parse the header&quot;&quot;&quot;</span>
+        <span class="n">length</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="n">UINT8</span><span class="p">,</span> <span class="n">file_</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">1</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">parsed</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="n">STRING</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">length</span><span class="p">),</span> <span class="n">file_</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">length</span><span class="p">))</span>
+        <span class="n">version</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">parsed</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">version</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">supported_versions</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">((</span><span class="s1">&#39;Unsupported file version </span><span class="si">{}</span><span class="s1">&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">version</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;magic_number_version&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">version</span>
+        <span class="k">if</span> <span class="n">version</span> <span class="o">==</span> <span class="mi">181</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields_revtwo</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">type_</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">:</span>
+            <span class="n">file_</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">offset</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">type_</span> <span class="o">==</span> <span class="s1">&#39;utf16&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">parse_utf16_string</span><span class="p">(</span><span class="n">file_</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">type_</span> <span class="o">==</span> <span class="s1">&#39;x-time&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="n">ENDIAN</span> <span class="o">+</span> <span class="s1">&#39;f&#39;</span><span class="p">,</span> <span class="n">file_</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">60000</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="n">type_</span><span class="p">,</span> <span class="n">file_</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">type_</span><span class="p">)))[</span><span class="mi">0</span><span class="p">]</span>
+
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;datetime&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">date_parser</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;date&#39;</span><span class="p">])</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;date&#39;</span><span class="p">]</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">_parse_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Parse the data&quot;&quot;&quot;</span>
+        <span class="n">file_</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">n_points</span> <span class="o">=</span> <span class="p">(</span><span class="n">file_</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_start</span><span class="p">)</span> <span class="o">//</span> <span class="mi">8</span>
+        <span class="n">file_</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_start</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">numpy</span><span class="o">.</span><span class="n">fromfile</span><span class="p">(</span><span class="n">file_</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="sa">b</span><span class="s1">&#39;&lt;d&#39;</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="n">n_points</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;yscaling&#39;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_parse_data_decompress</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Parse the data&quot;&quot;&quot;</span>
+        <span class="n">file_</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">n_points</span> <span class="o">=</span> <span class="n">file_</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_start</span>
+        <span class="n">file_length</span> <span class="o">=</span> <span class="n">file_</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
+        <span class="n">buf</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="n">signal</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="nb">int</span><span class="p">(</span><span class="n">n_points</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">file_</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_start</span><span class="p">)</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">file_</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">file_length</span><span class="p">:</span>
+            <span class="n">buf</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="n">INT16</span><span class="p">,</span> <span class="n">file_</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">2</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">buf</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">32767</span><span class="p">:</span>
+                <span class="n">buf</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">buf</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">buf</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+                <span class="n">buf</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">buf</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">buf</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">buf</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="n">INT16</span><span class="p">,</span> <span class="n">file_</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">2</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">4294967296</span>
+                <span class="n">buf</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="n">UINT32</span><span class="p">,</span> <span class="n">file_</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">buf</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">buf</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">signal</span><span class="p">[</span><span class="n">count</span><span class="p">]</span> <span class="o">=</span> <span class="n">buf</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">signal</span><span class="p">[</span><span class="n">count</span><span class="p">:]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">return</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">signal</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;yscaling&#39;</span><span class="p">]</span>
+
+<div class="viewcode-block" id="CHFile.times"><a class="viewcode-back" href="../../ch_parser.html#chromauto.ch_parser.CHFile.times">[docs]</a>    <span class="k">def</span> <span class="nf">times</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;The time values (x-value) for the data set in minutes&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">numpy</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;start_time&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;end_time&#39;</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">values</span><span class="p">))</span></div></div>
+
+
+<div class="viewcode-block" id="parse_utf_string"><a class="viewcode-back" href="../../ch_parser.html#chromauto.ch_parser.parse_utf_string">[docs]</a><span class="k">def</span> <span class="nf">parse_utf_string</span><span class="p">(</span><span class="n">file_</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;UTF8&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Parse a pascal type UTF16 encoded string from a binary file object&quot;&quot;&quot;</span>
+    <span class="n">string_length</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="n">UINT8</span><span class="p">,</span> <span class="n">file_</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">1</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">parsed</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="n">STRING</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">string_length</span><span class="p">),</span> <span class="n">file_</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">string_length</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">parsed</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">encoding</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MSFile"><a class="viewcode-back" href="../../ch_parser.html#chromauto.ch_parser.MSFile">[docs]</a><span class="k">class</span> <span class="nc">MSFile</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class that implements the Agilent .ms file format (mass spectrometry instrument)</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        xic_values (numpy.array): The intensity values of the mass spec</span>
+<span class="sd">        tic_values (list): The intensity values (y-value)</span>
+<span class="sd">        times (list): Time for the x-values</span>
+<span class="sd">        metadata (dict): The extracted metadata</span>
+<span class="sd">        filepath (str): The filepath this object was loaded from</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">fields</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="p">(</span><span class="s1">&#39;sample&#39;</span><span class="p">,</span> <span class="mi">24</span><span class="p">,</span> <span class="s1">&#39;utf8&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;description&#39;</span><span class="p">,</span> <span class="mi">86</span><span class="p">,</span> <span class="s1">&#39;utf8&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;sequence&#39;</span><span class="p">,</span> <span class="mi">252</span><span class="p">,</span> <span class="n">INT16</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;vial&#39;</span><span class="p">,</span> <span class="mi">253</span><span class="p">,</span> <span class="n">INT16</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;replicate&#39;</span><span class="p">,</span> <span class="mi">254</span><span class="p">,</span> <span class="n">INT16</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;method&#39;</span><span class="p">,</span> <span class="mi">228</span><span class="p">,</span> <span class="s1">&#39;utf8&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;operator&#39;</span><span class="p">,</span> <span class="mi">148</span><span class="p">,</span> <span class="s1">&#39;utf8&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;date&#39;</span><span class="p">,</span> <span class="mi">178</span><span class="p">,</span> <span class="s1">&#39;utf8&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;instrument&#39;</span><span class="p">,</span> <span class="mi">208</span><span class="p">,</span> <span class="s1">&#39;utf8&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;scans&#39;</span><span class="p">,</span> <span class="mi">278</span><span class="p">,</span> <span class="n">UINT32</span><span class="p">))</span>
+    <span class="n">data_start</span> <span class="o">=</span> <span class="mi">5771</span>
+    <span class="n">supported_versions</span> <span class="o">=</span> <span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Instantiate object</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            filepath (str): The path of the data file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filepath</span> <span class="o">=</span> <span class="n">filepath</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">times</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tic_values</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xic_values</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">intensity</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mz</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">precision</span> <span class="o">=</span> <span class="mi">3</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filepath</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="p">(</span><span class="n">file_</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_parse_header</span><span class="p">(</span><span class="n">file_</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;magic_number_version&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_parse_tic_data</span><span class="p">(</span><span class="n">file_</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_parse_xic_data</span><span class="p">(</span><span class="n">file_</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_parse_header</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Parse the header&quot;&quot;&quot;</span>
+        <span class="n">length</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="n">UINT8</span><span class="p">,</span> <span class="n">file_</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">1</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">parsed</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="n">STRING</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">length</span><span class="p">),</span> <span class="n">file_</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">length</span><span class="p">))</span>
+        <span class="n">version</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">parsed</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">version</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">supported_versions</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">((</span><span class="s1">&#39;Unsupported file version </span><span class="si">{}</span><span class="s1">&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">version</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;magic_number_version&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">version</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">type_</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">:</span>
+            <span class="n">file_</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">offset</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">type_</span> <span class="o">==</span> <span class="s1">&#39;utf8&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">parse_utf_string</span><span class="p">(</span><span class="n">file_</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">type_</span> <span class="o">==</span> <span class="s1">&#39;x-time&#39;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="n">ENDIAN</span> <span class="o">+</span> <span class="s1">&#39;f&#39;</span><span class="p">,</span> <span class="n">file_</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">60000</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="n">type_</span><span class="p">,</span> <span class="n">file_</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">type_</span><span class="p">)))[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;scans&#39;</span><span class="p">]:</span>
+            <span class="n">file_</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">260</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;tic&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="n">INT32</span><span class="p">,</span> <span class="n">file_</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">INT32</span><span class="p">)))[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">-</span> <span class="mi">2</span>
+
+            <span class="n">file_</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;tic&#39;</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;xic&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">xic_buffer</span> <span class="o">=</span> <span class="n">file_</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;scans&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="mi">12</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">xic_buffer</span><span class="p">),</span> <span class="mi">12</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;xic&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">unpack</span><span class="p">(</span><span class="n">INT32</span><span class="p">,</span> <span class="n">xic_buffer</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">INT32</span><span class="p">)])[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)</span>
+
+            <span class="n">xic_buffer</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">file_</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">272</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;normalization&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">unpack</span><span class="p">(</span><span class="n">INT32</span><span class="p">,</span> <span class="n">file_</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">INT32</span><span class="p">)))[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">-</span> <span class="mi">2</span>
+
+    <span class="k">def</span> <span class="nf">_parse_xic_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Parse the data&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mz</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">xic_values</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;scans&#39;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;scans&#39;</span><span class="p">]):</span>
+            <span class="n">file_</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;xic&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">xic_offset</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">unpack</span><span class="p">(</span><span class="n">INT16</span><span class="p">,</span> <span class="n">file_</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">INT16</span><span class="p">)))[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">18</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">file_</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;xic&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="mi">18</span><span class="p">)</span>
+            <span class="n">mz_buffer</span> <span class="o">=</span> <span class="n">file_</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">xic_offset</span> <span class="o">*</span> <span class="mi">4</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">xic_values</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">mz_buffer</span><span class="p">),</span> <span class="mi">4</span><span class="p">)):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">xic_values</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">unpack</span><span class="p">(</span><span class="n">UINT16</span><span class="p">,</span> <span class="n">mz_buffer</span><span class="p">[</span><span class="n">m</span> <span class="o">+</span> <span class="mi">2</span><span class="p">:</span><span class="n">m</span> <span class="o">+</span> <span class="mi">4</span><span class="p">])[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">mz</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">unpack</span><span class="p">(</span><span class="n">UINT16</span><span class="p">,</span> <span class="n">mz_buffer</span><span class="p">[</span><span class="n">m</span><span class="p">:</span><span class="n">m</span> <span class="o">+</span> <span class="mi">2</span><span class="p">])[</span><span class="mi">0</span><span class="p">])</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">xic_values</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xic_values</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">mz_buffer</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">xic_values</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xic_values</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xic_values</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">bitwise_and</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xic_values</span><span class="p">,</span> <span class="mi">16383</span><span class="p">)</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span>
+            <span class="n">numpy</span><span class="o">.</span><span class="n">right_shift</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xic_values</span><span class="p">,</span> <span class="mi">14</span><span class="p">)))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mz</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mz</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mz</span> <span class="o">/</span> <span class="mf">20.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mz</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mz</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">precision</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">_parse_tic_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;The time values (x-value) for the data set in minutes&quot;&quot;&quot;</span>
+        <span class="n">file_</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;tic&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">xic_buffer</span> <span class="o">=</span> <span class="n">file_</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;scans&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="mi">12</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">times</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tic_values</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">xic_buffer</span><span class="p">),</span> <span class="mi">12</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">unpack</span><span class="p">(</span><span class="n">INT32</span><span class="p">,</span> <span class="n">xic_buffer</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="mi">4</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">60000</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tic_values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">unpack</span><span class="p">(</span><span class="n">INT32</span><span class="p">,</span> <span class="n">xic_buffer</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">4</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="mi">8</span><span class="p">])[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="n">xic_buffer</span> <span class="o">=</span> <span class="kc">None</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">chromauto</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../utils.html">utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ch_parser.html">ch_parser</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Author.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,38 @@
+Welcome to chromauto's documentation!
+=====================================
+
+.. toctree::
+   :maxdepth: 4
+   :caption: Contents:
+
+   utils
+   ch_parser
+
+
+
+Introduction
+-----------------
+
+
+The :doc:`ch_parser` module has functions for parsing CH files
+
+The :doc:`utils` module has fucntions related to peak detection and analysis
+
+The README document has an example usage and step by step figures of the analysis:
+
+| ALCDH automated parsing:
+| https://github.com/dauenhauer-umn/micro-flow-reactor-paper/blob/master/README.md
+
+
+
+Example Notebooks
+-------------------
+
+- Different file types (TCD.ch, data.ms)
+   - https://github.com/dauenhauer-umn/micro-flow-reactor-paper/blob/master/README.md
+- Split peak automated parsing
+   - https://github.com/dauenhauer-umn/micro-flow-reactor-paper/blob/master/README.md
+- Seperated peak automated parsing
+   - https://github.com/dauenhauer-umn/micro-flow-reactor-paper/blob/master/README.md
+
+

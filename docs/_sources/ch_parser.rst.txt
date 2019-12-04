@@ -1,0 +1,8 @@
+ch_parser
+=================
+
+.. automodule:: chromauto.ch_parser
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
