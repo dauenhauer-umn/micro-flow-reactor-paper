@@ -29,10 +29,10 @@ Example Notebooks
 -------------------
 
 - Different file types (TCD.ch, data.ms)
-   - https://github.com/dauenhauer-umn/micro-flow-reactor-paper/blob/master/README.md
+   - https://github.com/dauenhauer-umn/micro-flow-reactor-paper/blob/master/filetypes_examples_notebook.ipynb
 - Split peak automated parsing
-   - https://github.com/dauenhauer-umn/micro-flow-reactor-paper/blob/master/README.md
+   - https://github.com/dauenhauer-umn/micro-flow-reactor-paper/blob/master/split_peak_example_notebook.ipynb
 - Seperated peak automated parsing
-   - https://github.com/dauenhauer-umn/micro-flow-reactor-paper/blob/master/README.md
+   - https://github.com/dauenhauer-umn/micro-flow-reactor-paper/blob/master/sep_peaks_examples_notebook.ipynb
 
 
