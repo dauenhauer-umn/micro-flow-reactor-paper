@@ -1,5 +1,5 @@
-Welcome to chromauto's documentation!
-=====================================
+chromauto: automating gas chromatography analysis
+=================================================
 
 .. toctree::
    :maxdepth: 4
@@ -13,6 +13,11 @@ Welcome to chromauto's documentation!
 Introduction
 -----------------
 
+Pre-print paper:
+
+`Catalysis-in-a-Box: A Micro-flow Catalytic Reactor Integrated within a Gas Chromatograph for Automated Kinetic Measurements`__
+
+.. __: https://chemrxiv.org/articles/Catalysis-in-a-Box_A_Micro-flow_Catalytic_Reactor_Integrated_within_a_Gas_Chromatograph_for_Automated_Kinetic_Measurements/11288885/1
 
 The :doc:`ch_parser` module has functions for parsing CH files
 
