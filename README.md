@@ -1,9 +1,8 @@
 # ALCDH automated parsing
 
-## Pre-print paper
+## Publication in "Matter" a CellPress Journal
 
-[Catalysis-in-a-Box: A Micro-flow Catalytic Reactor Integrated within a Gas Chromatograph for Automated Kinetic Measurements](https://chemrxiv.org/articles/Catalysis-in-a-Box_A_Micro-flow_Catalytic_Reactor_Integrated_within_a_Gas_Chromatograph_for_Automated_Kinetic_Measurements/11288885/1)
-
+[Catalysis-in-a-Box: Robotic Screening of Catalytic Materials in the Time of COVID-19 and Beyond](https://www.cell.com/matter/fulltext/S2590-2385(20)30316-7#%20)
 
 
 ### Usage
